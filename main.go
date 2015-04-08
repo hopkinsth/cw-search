@@ -7,12 +7,15 @@ import (
 	"github.com/codegangsta/cli"
 	. "github.com/tj/go-debug"
 	"os"
+	"strconv"
 	"time"
 )
 
 type filterFn func(out *cwl.OutputLogEvent) bool
 
 var nop = func(out *cwl.OutputLogEvent) bool { return true }
+
+const timeFormat = "2006-01-02 15:04:05"
 
 func main() {
 	app := cli.NewApp()
@@ -48,7 +51,7 @@ func main() {
 				0,
 				0,
 				time.FixedZone("UTC", 0),
-			).Format(time.Stamp),
+			).Format(timeFormat),
 			Usage: "start time for the search",
 		},
 		cli.StringFlag{
@@ -62,7 +65,7 @@ func main() {
 				59,
 				0,
 				time.FixedZone("UTC", 0),
-			).Format(time.Stamp),
+			).Format(timeFormat),
 		},
 	}
 
@@ -101,12 +104,14 @@ func tail(c *cli.Context, filter filterFn) {
 		"and end time", endTime.Format(time.Stamp),
 	)
 
+	debug("start time is", strconv.FormatInt(startTime.Unix(), 10))
+	debug("end time is", strconv.FormatInt(endTime.Unix(), 10))
 	// all these aws.<Type> methods are used
 	// because this struct wants pointers to everything
 	// not entirely sure why! but it does!
 	i := &cwl.GetLogEventsInput{
-		LogGroupName:  aws.String("logGroup"),
-		LogStreamName: aws.String("logStream"),
+		LogGroupName:  aws.String(c.String("logGroup")),
+		LogStreamName: aws.String(c.String("logStream")),
 		StartTime:     aws.Long(startTime.Unix() * 1000),
 		EndTime:       aws.Long(endTime.Unix() * 1000),
 		StartFromHead: aws.Boolean(true),
@@ -124,8 +129,10 @@ func tail(c *cli.Context, filter filterFn) {
 	for next != nil {
 		debug("have forward token, going to loop again")
 		for _, v := range out.Events {
-			if filter(v) {
+			if filter(v) == true {
 				fmt.Println(*v.Message)
+			} else {
+				debug("filter failed")
 			}
 		}
 		debug("printed stuff")
@@ -140,9 +147,11 @@ func tail(c *cli.Context, filter filterFn) {
 }
 
 func parseTime(in string) time.Time {
-	t, err := time.Parse(time.Stamp, in)
+	debug := Debug("timeParser")
+	t, err := time.Parse(timeFormat, in)
 	var res time.Time
 	if err != nil {
+		debug("time parsing failed w/input", in)
 		res = time.Now().UTC()
 		return res
 	}
