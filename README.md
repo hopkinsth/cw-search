@@ -5,8 +5,8 @@ Searches a specified log stream in cloudwatch logs
 For now...
 
 ```sh
-export AWS_ACCESS_KEY_ID=<accessKeyId`
-export AWS_SECRET_ACCESS_KEY=`secretAccessKey`
+export AWS_ACCESS_KEY_ID=accessKeyId
+export AWS_SECRET_ACCESS_KEY=secretAccessKey
 cw-search --lg "LogGroupName" --ls "LogStreamName" -s "2015-04-07 00:00:00" -e "2015-04-07 23:59:59"
 ```
 
