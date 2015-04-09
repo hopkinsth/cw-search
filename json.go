@@ -73,7 +73,6 @@ func (j *jsonFormatter) addJsonField(field string, source, dest map[string]inter
 		}
 
 		j.debug("hopefully setting " + fieldParts[len(fieldParts)-1])
-		j.debug("value should be " + prevSource[fieldParts[len(fieldParts)-1]].(string))
 		prevDest[fieldParts[len(fieldParts)-1]] = prevSource[fieldParts[len(fieldParts)-1]]
 	}
 }
