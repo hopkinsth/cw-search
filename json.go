@@ -77,13 +77,3 @@ func (j *jsonFormatter) addJsonField(field string, source, dest map[string]inter
 		prevDest[fieldParts[len(fieldParts)-1]] = prevSource[fieldParts[len(fieldParts)-1]]
 	}
 }
-
-func contains(needle string, haystack []string) bool {
-	for _, v := range haystack {
-		if v == needle {
-			return true
-		}
-	}
-
-	return false
-}
