@@ -12,6 +12,9 @@ import (
 )
 
 type filterFn func(out *cwl.OutputLogEvent) bool
+type formatter interface {
+	Format(string, []string) string
+}
 
 var nop = func(out *cwl.OutputLogEvent) bool { return true }
 
@@ -57,6 +60,14 @@ func main() {
 				0,
 				time.FixedZone("UTC", 0),
 			).Format(timeFormat),
+		},
+		cli.StringFlag{
+			Name:  "format, f",
+			Usage: "log line format. valid values are: json",
+		},
+		cli.StringSliceFlag{
+			Name:  "fields",
+			Usage: "used with --format; filters the fields shown in the output",
 		},
 	}
 
@@ -119,11 +130,23 @@ func tail(c *cli.Context, filter filterFn) {
 
 	next := out.NextForwardToken
 
+	var f formatter
+	fields := c.StringSlice("fields")
+	switch c.String("format") {
+	case "json":
+		f = &jsonFormatter{}
+	}
+
 	for next != nil {
 		debug("have forward token, going to loop again")
 		for _, v := range out.Events {
 			if filter(v) == true {
-				fmt.Println(*v.Message)
+				if f != nil {
+					fmt.Println(f.Format(*v.Message, fields))
+				} else {
+					fmt.Println(*v.Message)
+				}
+
 			} else {
 				debug("filter failed")
 			}
