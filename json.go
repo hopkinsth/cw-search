@@ -54,7 +54,10 @@ func (j *jsonFormatter) addJsonField(field string, source, dest map[string]inter
 			return
 		}
 
-		dest[fieldParts[0]] = make(map[string]interface{})
+		if dest[fieldParts[0]] == nil {
+			dest[fieldParts[0]] = make(map[string]interface{})
+		}
+
 		prevDest = dest[fieldParts[0]].(map[string]interface{})
 		prevSource = source[fieldParts[0]].(map[string]interface{})
 
@@ -66,7 +69,9 @@ func (j *jsonFormatter) addJsonField(field string, source, dest map[string]inter
 				return
 			}
 
-			prevDest[curName] = make(map[string]interface{})
+			if prevDest[curName] == nil {
+				prevDest[curName] = make(map[string]interface{})
+			}
 
 			prevSource = prevSource[curName].(map[string]interface{})
 			prevDest = prevDest[curName].(map[string]interface{})
