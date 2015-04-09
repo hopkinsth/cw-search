@@ -20,23 +20,14 @@ const timeFormat = "2006-01-02 15:04:05"
 func main() {
 	app := cli.NewApp()
 	app.Name = "cw-search"
-	app.Usage = "hey there"
+	app.Usage = "cw-search [log-group] [log-stream]"
+	app.Version = "1.0.0"
 
 	now := time.Now().UTC()
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "logGroup, lg",
-			Value: "",
-			Usage: "log group you're searching through",
-		},
-		cli.StringFlag{
-			Name:  "logStream, ls",
-			Value: "",
-			Usage: "log stream you're searching",
-		},
-		cli.StringFlag{
-			Name:  "region, rg",
+			Name:  "region, r",
 			Value: "us-east-1",
 			Usage: "AWS region you need to hit",
 		},
@@ -98,6 +89,8 @@ func tail(c *cli.Context, filter filterFn) {
 
 	startTime := parseTime(c.String("start"))
 	endTime := parseTime(c.String("end"))
+	logGroup := c.Args().Get(0)
+	logStream := c.Args().Get(1)
 
 	infoOut(
 		"running with start time", startTime.Format(time.Stamp),
@@ -110,8 +103,8 @@ func tail(c *cli.Context, filter filterFn) {
 	// because this struct wants pointers to everything
 	// not entirely sure why! but it does!
 	i := &cwl.GetLogEventsInput{
-		LogGroupName:  aws.String(c.String("logGroup")),
-		LogStreamName: aws.String(c.String("logStream")),
+		LogGroupName:  aws.String(logGroup),
+		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Long(startTime.Unix() * 1000),
 		EndTime:       aws.Long(endTime.Unix() * 1000),
 		StartFromHead: aws.Boolean(true),
