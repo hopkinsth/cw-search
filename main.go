@@ -8,6 +8,7 @@ import (
 	. "github.com/tj/go-debug"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func main() {
 			Name:  "format, f",
 			Usage: "log line format. valid values are: json",
 		},
-		cli.StringSliceFlag{
+		cli.StringFlag{
 			Name:  "fields",
 			Usage: "used with --format; filters the fields shown in the output",
 		},
@@ -131,10 +132,10 @@ func tail(c *cli.Context, filter filterFn) {
 	next := out.NextForwardToken
 
 	var f formatter
-	fields := c.StringSlice("fields")
+	fields := strings.Split(c.String("fields"), ",")
 	switch c.String("format") {
 	case "json":
-		f = &jsonFormatter{}
+		f = newJsonFormatter()
 	}
 
 	for next != nil {
