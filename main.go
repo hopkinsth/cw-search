@@ -129,8 +129,6 @@ func tail(c *cli.Context, filter filterFn) {
 		os.Exit(1)
 	}
 
-	next := out.NextForwardToken
-
 	var f formatter
 	fields := strings.Split(c.String("fields"), ",")
 	switch c.String("format") {
@@ -138,8 +136,9 @@ func tail(c *cli.Context, filter filterFn) {
 		f = newJsonFormatter()
 	}
 
-	for next != nil {
-		debug("have forward token, going to loop again")
+	var lastFwdToken *string
+
+	for {
 		for _, v := range out.Events {
 			if filter(v) == true {
 				if f != nil {
@@ -153,7 +152,17 @@ func tail(c *cli.Context, filter filterFn) {
 			}
 		}
 		debug("printed stuff")
-		i.NextToken = next
+
+		if lastFwdToken != nil && *out.NextForwardToken == *lastFwdToken {
+			debug("done with stream")
+			break
+		}
+
+		debug("have forward token, going to loop again")
+
+		i.NextToken = out.NextForwardToken
+		lastFwdToken = i.NextToken
+
 		out, err = cl.GetLogEvents(i)
 
 		if err != nil {
