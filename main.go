@@ -25,7 +25,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "cw-search"
 	app.Usage = "cw-search [log-group]:[log-stream] [log-group]:[log-stream]..."
-	app.Version = "1.1.0"
+	app.Version = "1.1.1"
 
 	now := time.Now().UTC()
 
@@ -78,7 +78,6 @@ func main() {
 
 		num := len(args)
 		done := 0
-		fmt.Printf("num args %d\n", num)
 		donech := make(chan error)
 		startTime := parseTime(c.String("start"))
 		endTime := parseTime(c.String("end"))
