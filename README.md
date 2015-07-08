@@ -1,7 +1,14 @@
 # cw-search
-Searches a specified log stream in cloudwatch logs
+Pulls data from a specified set of log streams in cloudwatch logs
 
 # Usage
+
+To query CloudWatch Logs with this tool, you'll need to have...
+
+1. AWS credentials set up either as environment variables (as in the example below) or in a [aws credential file](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files)
+2. A start and end time for your search formatted in YYYY-MM-DD HH:MM:SS format
+
+## Example
 
 ```sh
 $ export AWS_ACCESS_KEY_ID=accessKeyId
