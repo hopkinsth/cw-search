@@ -25,7 +25,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "cw-search"
 	app.Usage = "cw-search [log-group]:[log-stream] [log-group]:[log-stream]..."
-	app.Version = "1.0.0"
+	app.Version = "1.1.0"
 
 	now := time.Now().UTC()
 
