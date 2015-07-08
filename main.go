@@ -24,7 +24,7 @@ const timeFormat = "2006-01-02 15:04:05"
 func main() {
 	app := cli.NewApp()
 	app.Name = "cw-search"
-	app.Usage = "cw-search [log-group] [log-stream]"
+	app.Usage = "cw-search [log-group]:[log-stream] [log-group]:[log-stream]..."
 	app.Version = "1.0.0"
 
 	now := time.Now().UTC()
@@ -73,7 +73,64 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) {
-		tail(c, nop)
+		debug := Debug("cw-search:main:action")
+		args := c.Args()
+
+		num := len(args)
+		done := 0
+		fmt.Printf("num args %d\n", num)
+		donech := make(chan error)
+		startTime := parseTime(c.String("start"))
+		endTime := parseTime(c.String("end"))
+
+		infoOut(
+			"running with start time", startTime.Format(time.Stamp),
+			"and end time", endTime.Format(time.Stamp),
+		)
+
+		debug("start time is", strconv.FormatInt(startTime.Unix(), 10))
+		debug("end time is", strconv.FormatInt(endTime.Unix(), 10))
+
+		for _, pair := range args {
+			pos := strings.Index(pair, ":")
+
+			if pos == -1 {
+				fmt.Printf("Invalid log group/stream: %s\n", pair)
+				// just bail...
+				return
+			}
+
+			group := pair[:pos]
+			stream := pair[pos+1:]
+
+			// allow comma-separated log streams too
+			pos = strings.Index(stream, ",")
+
+			if pos == -1 {
+				// if not comma-separated, just run the thing
+				go tail(c, group, stream, startTime, endTime, nop, donech)
+			} else {
+				// further parsing required
+				streams := strings.Split(stream, ",")
+
+				for _, stream := range streams {
+					num += 1
+					go tail(c, group, stream, startTime, endTime, nop, donech)
+				}
+			}
+		}
+
+		for {
+			err := <-donech
+			done += 1
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: %s\n", err)
+			}
+
+			if done == num {
+				return
+			}
+		}
 	}
 
 	app.Run(os.Args)
@@ -94,23 +151,18 @@ func getCwl(c *cli.Context) *cwl.CloudWatchLogs {
 	return cl
 }
 
-func tail(c *cli.Context, filter filterFn) {
-	debug := Debug("tail")
+func tail(
+	c *cli.Context,
+	logGroup, logStream string,
+	startTime, endTime time.Time,
+	filter filterFn,
+	done chan<- error,
+) {
+
+	debug := Debug("cw-search:tail")
 
 	cl := getCwl(c)
 
-	startTime := parseTime(c.String("start"))
-	endTime := parseTime(c.String("end"))
-	logGroup := c.Args().Get(0)
-	logStream := c.Args().Get(1)
-
-	infoOut(
-		"running with start time", startTime.Format(time.Stamp),
-		"and end time", endTime.Format(time.Stamp),
-	)
-
-	debug("start time is", strconv.FormatInt(startTime.Unix(), 10))
-	debug("end time is", strconv.FormatInt(endTime.Unix(), 10))
 	// all these aws.<Type> methods are used
 	// because this struct wants pointers to everything
 	// not entirely sure why! but it does!
@@ -125,8 +177,8 @@ func tail(c *cli.Context, filter filterFn) {
 	out, err := cl.GetLogEvents(i)
 	debug("got first set of events")
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		done <- err
+		return
 	}
 
 	var f formatter
@@ -141,12 +193,13 @@ func tail(c *cli.Context, filter filterFn) {
 	for {
 		for _, v := range out.Events {
 			if filter(v) == true {
+				fmt.Printf("%s:%s: ", logGroup, logStream)
 				if f != nil {
-					fmt.Println(f.Format(*v.Message, fields))
+					fmt.Print(f.Format(*v.Message, fields))
 				} else {
-					fmt.Println(*v.Message)
+					fmt.Print(*v.Message)
 				}
-
+				fmt.Print("\n")
 			} else {
 				debug("filter failed")
 			}
@@ -155,7 +208,8 @@ func tail(c *cli.Context, filter filterFn) {
 
 		if lastFwdToken != nil && *out.NextForwardToken == *lastFwdToken {
 			debug("done with stream")
-			break
+			done <- nil
+			return
 		}
 
 		debug("have forward token, going to loop again")
@@ -166,14 +220,14 @@ func tail(c *cli.Context, filter filterFn) {
 		out, err = cl.GetLogEvents(i)
 
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			done <- err
+			return
 		}
 	}
 }
 
 func parseTime(in string) time.Time {
-	debug := Debug("timeParser")
+	debug := Debug("cw-search:timeParser")
 	t, err := time.Parse(timeFormat, in)
 	var res time.Time
 	if err != nil {
