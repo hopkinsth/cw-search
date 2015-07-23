@@ -76,7 +76,7 @@ func main() {
 		debug := Debug("cw-search:main:action")
 		args := c.Args()
 
-		num := len(args)
+		num := 0
 		done := 0
 		donech := make(chan error)
 		startTime := parseTime(c.String("start"))
@@ -107,6 +107,7 @@ func main() {
 
 			if pos == -1 {
 				// if not comma-separated, just run the thing
+				num += 1
 				go tail(c, group, stream, startTime, endTime, nop, donech)
 			} else {
 				// further parsing required
